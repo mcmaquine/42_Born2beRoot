@@ -43,10 +43,20 @@ Edit file /etc/ssh/sshd_config with nano
 - On line #Port 22, remove # and change 22 to 4242
 - On the line PermitRootLogin edit option to no (remove #)
 
+Edit file /etc/ssh/ssh_config with nano
+- On line #Port 22, remove # and change 22 to 4242
+
 ## Configuring UFW
 Uncomplicated Firewall (ufw) provides a framework for managing netfilter, as well a command-line interface for manipulating the firewall.
+ufw enable
 Allow 4242 to ssh:
 ufw allow 4242/tcp
+
+Use ufw deny <port> to block an acess
+
+To delete some rule:
+ufw status numbered
+ufw delete <number>
 
 ## Create group
 addgroup user42
@@ -57,7 +67,7 @@ sudo mkdir -p /var/log/sudo
 sudo chmod 700 /var/log/sudo
 sudo mkdir -p /var/log/sudo-io
 sudo chmod 700 /var/log/sudo-io
-Add these lines to /etc/sudoers
+To the file using visudo
 Defaults	passwd_tries=3
 Defaults	badpass_message="Wrong password, contact server manager"
 Defaults	logfile="/var/log/sudo/sudo.log"
@@ -95,6 +105,7 @@ and retype new password
 edit file /etc/adduser.conf uncomentig these lines:
 DSHELL=/bin/bash
 DHOME=/home
+USERS_GROUP=tty
 
 adduser LOGIN --comment "NAME"
 and type a temporary password
@@ -116,6 +127,7 @@ After that, to login via ssh on a terminal:
 ssh <user>@127.0.0.1 -p 4242
 
 ## Monitoring Script
+Create the file monitoring.sh on /usr/local/bin
 #!/bin/bash
 
 arch=$(uname -srvmo)
@@ -134,7 +146,7 @@ tcp_connections=$(ss -ta | grep ESTAB | wc -l)
 users_logged=$(who | wc -l)
 ip_addr=$(hostname -I | awk '{print $1}')
 mac_addr=$(ip link show | awk '/ether/ {print $2}' | head -n 1)
-sudo_cmds=$(grep -c "COMMAND=" /var/log/sudo/sudo.log || echo 0)
+sudo_cmds=$(journalctl _COMM=sudo | grep COMMAND | wc -l)
 
 host=$(hostname)
 tty=$(tty | awk -F/ '{print $NF}')
@@ -155,14 +167,20 @@ Broadcast message from root@$host ($tty) ($datetime):
 	#Network: IP $ip_addr ($mac_addr)
 	#Sudo : $sudo_cmds cmd
 "
+if [ ! -f /tmp/startup-mesg-shown ]; then
+	echo "$msg" | sudo tee  /etc/issue > /dev/null
+        touch /tmp/startup-mesg-shown
+fi
 
 for	tty in /dev/pts/*; do
 	[ -w "$tty" ] && echo "$msg" > "$tty"
 done
+wall "$msg"
 
 To run every 10 minutes do this:
 sudo crontab -e
-*/10 * * * * /usr/bin/monitoring.sh
+*/10 * * * *	/usr/local/bin/monitoring.sh
+@reboot			/usr/local/bin/monitoring.sh
 
 on the end o file /etc/profile add the script
 
