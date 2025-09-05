@@ -182,9 +182,9 @@ sudo crontab -e
 */10 * * * *	/usr/local/bin/monitoring.sh
 @reboot			/usr/local/bin/monitoring.sh
 
-on the end o file /etc/profile add the script
-
 ## set new hostname
 To change the machine name do:
 sudo hostnamectl set-hostname NEW_NAME
-After this just logof and login to see the the new name.
+After this just logoff and login to see the the new name.
+
+sudo ss -tpnl | grep ssh
